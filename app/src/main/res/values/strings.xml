@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">notes</string>
+    <string name="title_agenda">Agenda</string>
+    <string name="title_home">Todo</string>
+    <string name="title_dashboard">Files</string>
+    <string name="title_notifications">Settings</string>
+</resources>
