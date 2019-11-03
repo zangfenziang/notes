@@ -42,6 +42,7 @@ public class ItemActivity extends AppCompatActivity {
                 break;
             case R.id.action_add:
                 Intent intent = new Intent(this, EditorActivity.class);
+                intent.putExtra(EditorActivity.INTENT_FILE_NAME, filename);
                 startActivity(intent);
                 break;
         }
