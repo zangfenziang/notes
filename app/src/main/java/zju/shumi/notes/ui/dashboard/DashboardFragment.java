@@ -3,17 +3,15 @@ package zju.shumi.notes.ui.dashboard;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,16 +25,22 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 
+import zju.shumi.notes.ItemActivity;
 import zju.shumi.notes.MainActivity;
 import zju.shumi.notes.R;
 
 public class DashboardFragment extends Fragment implements View.OnClickListener {
-
+    public final static String StrDateFormat = "yyyy-MM-dd HH:mm:ss";
     private DashboardViewModel dashboardViewModel;
     private SharedPreferences sp;
     private SharedPreferences map;
@@ -52,32 +56,56 @@ public class DashboardFragment extends Fragment implements View.OnClickListener 
         final LinearLayout layout = root.findViewById(R.id.files_layout);
         final LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        layoutParams.setMargins(30, 20, 30, 0);
+        layoutParams.setMargins(30, 10, 30, 10);
         final DashboardFragment ts = this;
         dashboardViewModel.getFileNames().observe(this, new Observer<Set<String>>() {
             @Override
             public void onChanged(Set<String> strings) {
                 layout.removeAllViews();
-                strings.forEach(new Consumer<String>() {
+                ArrayList<String> arr = new ArrayList<>(strings);
+                final Map<String, Date> m = new HashMap<>();
+                for (int i = 0; i < arr.size(); i++) {
+                    String str = arr.get(i);
+                    String time = map.getString(str, "");
+                    SimpleDateFormat sdf = new SimpleDateFormat(StrDateFormat);
+                    try{
+                        m.put(str, sdf.parse(time));
+                    }
+                    catch (ParseException e){
+                        Log.d("ParseStringError", e.getMessage());
+                    }
+                }
+                arr.sort(new Comparator<String>() {
                     @Override
-                    public void accept(final String s) {
-                        String time = map.getString(s, "");
-                        LinearLayout linearLayout = new LinearLayout(getContext());
-                        linearLayout.setOrientation(LinearLayout.VERTICAL);
-                        TextView textView = new TextView(getContext());
-                        textView.setText(s);
-                        TextView textView1 = new TextView(getContext());
-                        textView1.setText(time);
-                        linearLayout.addView(textView);
-                        linearLayout.addView(textView1);
-                        linearLayout.setBackgroundResource(R.drawable.ripple);
-                        layout.addView(linearLayout, layoutParams);
-                        linearLayout.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                Log.d("Click", s);
-                            }
-                        });
+                    public int compare(String o1, String o2) {
+                        Date date1 = m.getOrDefault(o1, new Date());
+                        Date date2 = m.getOrDefault(o2, new Date());
+                        return date1.compareTo(date2);
+                    }
+                });
+                for (String s : arr) {
+                    accept(s);
+                }
+            }
+            private void accept(final String s) {
+                String time = map.getString(s, "");
+                LinearLayout linearLayout = new LinearLayout(getContext());
+                linearLayout.setOrientation(LinearLayout.VERTICAL);
+                TextView textView = new TextView(getContext());
+                textView.setText(s);
+                TextView textView1 = new TextView(getContext());
+                textView1.setText(time);
+                linearLayout.addView(textView);
+                linearLayout.addView(textView1);
+                linearLayout.setBackgroundResource(R.drawable.ripple);
+                layout.addView(linearLayout, layoutParams);
+                linearLayout.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Log.d("Click", s);
+                        Intent intent = new Intent(getActivity(), ItemActivity.class);
+                        intent.putExtra(ItemActivity.FILENAME, s);
+                        startActivity(intent);
                     }
                 });
             }
@@ -111,7 +139,8 @@ public class DashboardFragment extends Fragment implements View.OnClickListener 
                                        SharedPreferences.Editor mapEditor = map.edit();
                                        newFileNames.add(filename);
                                        editor.putStringSet(MainActivity.OrgFileNames, newFileNames);
-                                       mapEditor.putString(filename, date.toString());
+                                       SimpleDateFormat sdf = new SimpleDateFormat(StrDateFormat);
+                                       mapEditor.putString(filename, sdf.format(date));
                                        mapEditor.commit();
                                        editor.commit();
                                        dashboardViewModel.addFileName(filename);
