@@ -53,13 +53,14 @@ public class DashboardFragment extends Fragment implements View.OnClickListener 
         final LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         layoutParams.setMargins(30, 20, 30, 0);
+        final DashboardFragment ts = this;
         dashboardViewModel.getFileNames().observe(this, new Observer<Set<String>>() {
             @Override
             public void onChanged(Set<String> strings) {
                 layout.removeAllViews();
                 strings.forEach(new Consumer<String>() {
                     @Override
-                    public void accept(String s) {
+                    public void accept(final String s) {
                         String time = map.getString(s, "");
                         LinearLayout linearLayout = new LinearLayout(getContext());
                         linearLayout.setOrientation(LinearLayout.VERTICAL);
@@ -69,8 +70,14 @@ public class DashboardFragment extends Fragment implements View.OnClickListener 
                         textView1.setText(time);
                         linearLayout.addView(textView);
                         linearLayout.addView(textView1);
-                        linearLayout.setBackgroundResource(R.drawable.border);
+                        linearLayout.setBackgroundResource(R.drawable.ripple);
                         layout.addView(linearLayout, layoutParams);
+                        linearLayout.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                Log.d("Click", s);
+                            }
+                        });
                     }
                 });
             }
