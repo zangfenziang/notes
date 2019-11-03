@@ -3,34 +3,29 @@ package zju.shumi.notes;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.Window;
 
-import zju.shumi.notes.R;
+public class EditorActivity extends AppCompatActivity {
 
-public class ItemActivity extends AppCompatActivity {
-    public final static String FILENAME = "ITEM_ACTIVITY_FILENAME";
-    private String filename;
+    private EditorViewModel editorViewModel;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_item);
-        filename = getIntent().getStringExtra(FILENAME);
+        setContentView(R.layout.activity_editor);
+        editorViewModel = new EditorViewModel();
         ActionBar actionBar = getSupportActionBar();
-        actionBar.setTitle(filename);
+        actionBar.setTitle("Create Item");
         actionBar.setHomeButtonEnabled(true);
         actionBar.setDisplayHomeAsUpEnabled(true);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.items_title_menu, menu);
+        getMenuInflater().inflate(R.menu.item_title_menu, menu);
         return true;
     }
 
@@ -40,9 +35,7 @@ public class ItemActivity extends AppCompatActivity {
             case android.R.id.home:
                 finish();
                 break;
-            case R.id.action_add:
-                Intent intent = new Intent(this, EditorActivity.class);
-                startActivity(intent);
+            case R.id.action_save:
                 break;
         }
         return true;
