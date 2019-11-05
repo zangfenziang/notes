@@ -1,6 +1,7 @@
 package zju.shumi.notes;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -16,6 +17,7 @@ import zju.shumi.notes.R;
 
 public class ItemActivity extends AppCompatActivity {
     public final static String FILENAME = "ITEM_ACTIVITY_FILENAME";
+    public final static int STARTEDITORACTIVITY = 1;
     private String filename;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,9 +45,20 @@ public class ItemActivity extends AppCompatActivity {
             case R.id.action_add:
                 Intent intent = new Intent(this, EditorActivity.class);
                 intent.putExtra(EditorActivity.INTENT_FILE_NAME, filename);
-                startActivity(intent);
+                startActivityForResult(intent, STARTEDITORACTIVITY);
                 break;
         }
         return true;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == STARTEDITORACTIVITY){
+            if (resultCode == EditorActivity.SUCCESS){
+                String result = data.getStringExtra("Item");
+                Log.d("Result", result);
+            }
+        }
     }
 }

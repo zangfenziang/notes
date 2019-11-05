@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 
 public class EditorViewModel extends ViewModel {
     public enum State{
@@ -131,6 +132,43 @@ public class EditorViewModel extends ViewModel {
     public void setShow(Time show) {
         this.show.setValue(show);
     }
+
+    @NonNull
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append(state.getValue().toString());
+        builder.append(" ");
+        builder.append("[");
+        if (priority.getValue() != Priority.None){
+            builder.append("#");
+        }
+        builder.append(priority.getValue().toString());
+        builder.append("] ");
+        builder.append(title.getValue());
+        if (!tags.getValue().isEmpty()){
+            builder.append(" [");
+            builder.append(String.join(" ", tags.getValue()));
+            builder.append("]");
+        }
+        builder.append("\n");
+        builder.append("DEADLINE: ");
+        builder.append(String.format("<%s>", deadline.getValue().toString()));
+        builder.append(" SCHEDULED: ");
+        builder.append(String.format("<%s> ", scheduled.getValue().toString()));
+        ShowOnTime time = showOnTime.getValue();
+        Time showTime = show.getValue();
+        if (time.type == ShowOnTime.Type.None){
+            builder.append(String.format("<%s>", showTime.toString()));
+        }
+        else{
+            builder.append(String.format("<%s %d%s>", showTime.toString(), time.num, time.repeat.toString()));
+        }
+        builder.append("\n");
+        builder.append(notes.getValue());
+        builder.append("\n");
+        return builder.toString();
+    }
 }
 
 class Time{
@@ -157,20 +195,24 @@ class Time{
 }
 
 class ShowOnTime{
-    public enum TimeType{
-        None, Repeat, Period;
+    public enum Type{
+        None, Repeat
     }
-    private Time additionTime;
-    private TimeType type;
-
-    public ShowOnTime(Time additionTime, TimeType type) {
-        this.additionTime = additionTime;
-        this.type = type;
+    Type type;
+    public enum Repeat{
+        d, w, m, y
     }
+    int num;
+    Repeat repeat;
 
     @NonNull
     @Override
     public String toString() {
-        return "";
+        if (type == Type.None){
+            return "None";
+        }
+        else{
+            return "+" + num + repeat.toString();
+        }
     }
 }
