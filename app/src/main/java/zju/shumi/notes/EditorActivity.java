@@ -9,30 +9,39 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
+import android.media.session.PlaybackState;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class EditorActivity extends AppCompatActivity implements View.OnClickListener {
 
     public final static String INTENT_FILE_NAME = "Editor_File_Name";
 
     private EditorViewModel editorViewModel;
+    private SharedPreferences sp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        sp = getSharedPreferences("cache_tags", MODE_PRIVATE);
         setContentView(R.layout.activity_editor);
         ActionBar actionBar = getSupportActionBar();
         actionBar.setTitle("Create Item");
@@ -95,9 +104,10 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
             public void onChanged(Set<String> strings) {
                 StringBuilder builder = new StringBuilder();
                 for (String string : strings) {
+                    builder.append(" ");
                     builder.append(string);
                 }
-                tags.setText(String.format("Tags: ", builder.toString()));
+                tags.setText(String.format("Tags:%s", builder.toString()));
             }
         });
         editorViewModel.setTags(new HashSet<String>());
@@ -250,7 +260,71 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
                     }).create().show();
         }
         if (v.getId() == R.id.item_tags){
-
+            final LinearLayout layout = new LinearLayout(this);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            final LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            layoutParams.setMargins(80, 10, 80, 10);
+            LinearLayout textLayout = new LinearLayout(this);
+            textLayout.setOrientation(LinearLayout.HORIZONTAL);
+            final EditText editText = new EditText(this);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT);
+            params.weight = 1;
+            textLayout.addView(editText, params);
+            Button button = new Button(this);
+            button.setText("Add");
+            textLayout.addView(button);
+            layout.addView(textLayout, layoutParams);
+            final Set<String> set = sp.getStringSet("tags", new HashSet<String>());
+            final EditorActivity ts = this;
+            final ArrayList<CheckBox> boxes = new ArrayList<>();
+            final Set<String> select = editorViewModel.getTags().getValue();
+            final Consumer<String> consumer = new Consumer<String>() {
+                @Override
+                public void accept(String s) {
+                    CheckBox checkBox = new CheckBox(ts);
+                    checkBox.setText(s);
+                    if (select.contains(s)){
+                        checkBox.setChecked(true);
+                    }
+                    layout.addView(checkBox, layoutParams);
+                    boxes.add(checkBox);
+                }
+            };
+            set.forEach(consumer);
+            button.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    String text = editText.getText().toString().trim();
+                    if (!text.isEmpty() && !set.contains(text)){
+                        set.add(text);
+                        SharedPreferences.Editor editor = sp.edit();
+                        editor.putStringSet("tags", set);
+                        editor.commit();
+                        consumer.accept(text);
+                    }
+                }
+            });
+            new AlertDialog.Builder(this)
+                    .setTitle("Tags:")
+                    .setView(layout)
+                    .setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            final Set<String> tags = new HashSet<>();
+                            boxes.forEach(new Consumer<CheckBox>() {
+                                @Override
+                                public void accept(CheckBox checkBox) {
+                                    if (checkBox.isChecked()){
+                                        tags.add(checkBox.getText().toString());
+                                    }
+                                }
+                            });
+                            editorViewModel.setTags(tags);
+                        }
+                    })
+                    .create().show();
         }
         if (v.getId() == R.id.item_deadline){
 
