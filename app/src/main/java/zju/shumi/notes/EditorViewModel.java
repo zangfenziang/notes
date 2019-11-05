@@ -18,19 +18,12 @@ public class EditorViewModel extends ViewModel {
     public enum Priority{
         None, A, B, C, D
     }
-    public enum TimeType{
-        None, Repeat, Period;
-    }
-    public class ShowOnTime{
-        Time originTime, additionTime;
-        TimeType type;
-    }
     private MutableLiveData<String> title;
     private MutableLiveData<String> filename;
     private MutableLiveData<State> state;
     private MutableLiveData<Priority> priority;
     private MutableLiveData<Set<String>> tags;
-    private MutableLiveData<Time> scheduled, deadline;
+    private MutableLiveData<Time> scheduled, deadline, show, closed;
     private MutableLiveData<ShowOnTime> showOnTime;
     private MutableLiveData<String> notes;
     public EditorViewModel(){
@@ -43,6 +36,8 @@ public class EditorViewModel extends ViewModel {
         deadline = new MutableLiveData<>();
         showOnTime = new MutableLiveData<>();
         notes = new MutableLiveData<>();
+        closed = new MutableLiveData<>();
+        show = new MutableLiveData<>();
         title.setValue("");
         filename.setValue("");
         state.setValue(State.None);
@@ -87,6 +82,12 @@ public class EditorViewModel extends ViewModel {
         return notes;
     }
 
+    public LiveData<Time> getClosed(){return closed;}
+
+    public LiveData<Time> getShow() {
+        return show;
+    }
+
     public void setTitle(String title) {
         this.title.setValue(title);
     }
@@ -122,6 +123,14 @@ public class EditorViewModel extends ViewModel {
     public void setNotes(String notes) {
         this.notes.setValue(notes);
     }
+
+    public void setClosed(Time closed) {
+        this.closed.setValue(closed);
+    }
+
+    public void setShow(Time show) {
+        this.show.setValue(show);
+    }
 }
 
 class Time{
@@ -144,5 +153,24 @@ class Time{
             s = String.format("%s %02d:%02d", s, hour, minute);
         }
         return s;
+    }
+}
+
+class ShowOnTime{
+    public enum TimeType{
+        None, Repeat, Period;
+    }
+    private Time additionTime;
+    private TimeType type;
+
+    public ShowOnTime(Time additionTime, TimeType type) {
+        this.additionTime = additionTime;
+        this.type = type;
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return "";
     }
 }

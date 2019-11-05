@@ -2,25 +2,29 @@ package zju.shumi.notes;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
-public class EditorActivity extends AppCompatActivity {
+public class EditorActivity extends AppCompatActivity implements View.OnClickListener {
 
     public final static String INTENT_FILE_NAME = "Editor_File_Name";
 
@@ -73,6 +77,7 @@ public class EditorActivity extends AppCompatActivity {
             }
         });
         editorViewModel.setState(EditorViewModel.State.None);
+        stateTextView.setOnClickListener(this);
 
         final TextView priorityTextView = findViewById(R.id.item_priority);
         editorViewModel.getPriority().observe(this, new Observer<EditorViewModel.Priority>() {
@@ -82,6 +87,7 @@ public class EditorActivity extends AppCompatActivity {
             }
         });
         editorViewModel.setState(EditorViewModel.State.None);
+        priorityTextView.setOnClickListener(this);
 
         final TextView tags = findViewById(R.id.item_tags);
         editorViewModel.getTags().observe(this, new Observer<Set<String>>() {
@@ -95,6 +101,7 @@ public class EditorActivity extends AppCompatActivity {
             }
         });
         editorViewModel.setTags(new HashSet<String>());
+        tags.setOnClickListener(this);
 
         final TextView scheduled = findViewById(R.id.item_scheduled);
         editorViewModel.getScheduled().observe(this, new Observer<Time>() {
@@ -105,7 +112,7 @@ public class EditorActivity extends AppCompatActivity {
                 }
             }
         });
-        Time time = new Time();
+        final Time time = new Time();
         Calendar calendar = Calendar.getInstance();
         time.year = calendar.get(Calendar.YEAR);
         time.month = calendar.get(Calendar.MONTH)+1;
@@ -113,6 +120,71 @@ public class EditorActivity extends AppCompatActivity {
         time.hour = calendar.get(Calendar.HOUR_OF_DAY);
         time.minute = calendar.get(Calendar.MINUTE);
         editorViewModel.setScheduled(time);
+
+        final TextView deadline = findViewById(R.id.item_deadline);
+        editorViewModel.getDeadeline().observe(this, new Observer<Time>() {
+            @Override
+            public void onChanged(Time time) {
+                deadline.setText(String.format("Deadline: %s", time.toString()));
+            }
+        });
+        deadline.setOnClickListener(this);
+
+        final TextView showOn = findViewById(R.id.item_show_on);
+        final TextView showOnAddition = findViewById(R.id.item_interval);
+        final View showOnAdditionTop = findViewById(R.id.item_interval_margin_top);
+        editorViewModel.getShow().observe(this, new Observer<Time>() {
+            @Override
+            public void onChanged(Time time) {
+                showOn.setText(String.format("Show on: %s", time.toString()));
+                showOnAddition.setVisibility(View.VISIBLE);
+                showOnAdditionTop.setVisibility(View.VISIBLE);
+            }
+        });
+        editorViewModel.getShowOnTime().observe(this, new Observer<ShowOnTime>() {
+            @Override
+            public void onChanged(ShowOnTime showOnTime) {
+                showOnAddition.setText(String.format("Interval: %s", showOnTime.toString()));
+            }
+        });
+        showOn.setOnClickListener(this);
+        showOnAddition.setOnClickListener(this);
+
+        final TextView closed = findViewById(R.id.item_closed);
+        final View closed_top = findViewById(R.id.item_closed_margin_top);
+        editorViewModel.getClosed().observe(this, new Observer<Time>() {
+            @Override
+            public void onChanged(Time time) {
+                if (time == null){
+                    closed.setVisibility(View.GONE);
+                    closed_top.setVisibility(View.GONE);
+                }
+                else{
+                    closed.setVisibility(View.VISIBLE);
+                    closed_top.setVisibility(View.VISIBLE);
+                    closed.setText(String.format("Closed: %s", time.toString()));
+                }
+            }
+        });
+        editorViewModel.setClosed(null);
+
+        final EditText notes = findViewById(R.id.item_notes);
+        notes.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                editorViewModel.setNotes(s.toString());
+            }
+        });
     }
 
     @Override
@@ -131,5 +203,63 @@ public class EditorActivity extends AppCompatActivity {
                 break;
         }
         return true;
+    }
+
+    @Override
+    public void onClick(View v) {
+        if (v.getId() == R.id.item_state){
+            final EditorViewModel.State[] states = EditorViewModel.State.values();
+            String[] items = new String[states.length];
+            EditorViewModel.State state = editorViewModel.getState().getValue();
+            int index = 0;
+            for (int i = 0; i < states.length; i++) {
+                items[i] = states[i].toString();
+                if (state == states[i]){
+                    index = i;
+                }
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle("State:")
+                    .setSingleChoiceItems(items, index, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            editorViewModel.setState(states[which]);
+                            dialog.dismiss();
+                        }
+                    }).create().show();
+        }
+        else if (v.getId() == R.id.item_priority){
+            final EditorViewModel.Priority[] priorities = EditorViewModel.Priority.values();
+            String[] array = new String[priorities.length];
+            int index = 0;
+            EditorViewModel.Priority priority = editorViewModel.getPriority().getValue();
+            for (int i = 0; i < priorities.length; i++) {
+                array[i] = priorities[i].toString();
+                if (priority == priorities[i]){
+                    index = i;
+                }
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle("Priority:")
+                    .setSingleChoiceItems(array, index, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            editorViewModel.setPriority(priorities[which]);
+                            dialog.dismiss();
+                        }
+                    }).create().show();
+        }
+        if (v.getId() == R.id.item_tags){
+
+        }
+        if (v.getId() == R.id.item_deadline){
+
+        }
+        if (v.getId() == R.id.item_show_on){
+
+        }
+        if (v.getId() == R.id.item_interval){
+
+        }
     }
 }
