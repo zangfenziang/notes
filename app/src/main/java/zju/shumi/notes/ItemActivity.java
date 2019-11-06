@@ -14,9 +14,13 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Window;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.function.Consumer;
 
 import zju.shumi.notes.R;
 import zju.shumi.notes.modal.Item;
@@ -38,10 +42,41 @@ public class ItemActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_item);
         itemViewModel = new ItemViewModel();
+        final LinearLayout layout = findViewById(R.id.activity_item_content);
         itemViewModel.getItems().observe(this, new Observer<ArrayList<Item>>() {
             @Override
             public void onChanged(ArrayList<Item> items) {
-                // TODO
+                layout.removeAllViews();
+                items.forEach(new Consumer<Item>() {
+                    @Override
+                    public void accept(Item item) {
+                        LinearLayout linearLayout = new LinearLayout(ItemActivity.this);
+                        linearLayout.setOrientation(LinearLayout.VERTICAL);
+
+                        LinearLayout head = new LinearLayout(ItemActivity.this);
+                        head.setOrientation(LinearLayout.HORIZONTAL);
+                        TextView headText = new TextView(ItemActivity.this);
+                        head.addView(headText);
+                        ImageButton edit = new ImageButton(ItemActivity.this);
+                        edit.setImageResource(R.drawable.ic_action_edit_black);
+                        head.addView(edit);
+                        ImageButton add = new ImageButton(ItemActivity.this);
+                        add.setImageResource(R.drawable.ic_action_add_black);
+                        head.addView(add);
+                        linearLayout.addView(head);
+
+                        LinearLayout tag = new LinearLayout(ItemActivity.this);
+                        tag.setOrientation(LinearLayout.HORIZONTAL);
+                        linearLayout.addView(tag);
+
+                        // TODO
+
+                        TextView note = new TextView(ItemActivity.this);
+                        linearLayout.addView(note);
+
+                        layout.addView(linearLayout);
+                    }
+                });
             }
         });
         filename = getIntent().getStringExtra(FILENAME);
