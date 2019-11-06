@@ -9,11 +9,13 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.session.PlaybackState;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -22,6 +24,11 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.wdullaer.materialdatetimepicker.date.DatePickerDialog;
+import com.wdullaer.materialdatetimepicker.date.MonthAdapter;
+import com.wdullaer.materialdatetimepicker.time.TimePickerDialog;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -31,12 +38,21 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import zju.shumi.notes.modal.Priority;
+import zju.shumi.notes.modal.ShowOnTime;
+import zju.shumi.notes.modal.State;
+import zju.shumi.notes.modal.Time;
+
+
 public class EditorActivity extends AppCompatActivity implements View.OnClickListener {
 
     public final static String INTENT_FILE_NAME = "Editor_File_Name";
+    public final static String INTENT_PRIORITY = "Editor_Priority";
+    public final static int SUCCESS = 1;
 
     private EditorViewModel editorViewModel;
     private SharedPreferences sp;
+    private int itemPriority;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,26 +92,27 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
             }
         });
         String name = getIntent().getStringExtra(INTENT_FILE_NAME);
+        itemPriority = getIntent().getIntExtra(INTENT_PRIORITY, 0);
         editorViewModel.setFilename(name);
 
         final TextView stateTextView = findViewById(R.id.item_state);
-        editorViewModel.getState().observe(this, new Observer<EditorViewModel.State>() {
+        editorViewModel.getState().observe(this, new Observer<State>() {
             @Override
-            public void onChanged(EditorViewModel.State state) {
+            public void onChanged(State state) {
                 stateTextView.setText(String.format("State: %s", state.toString()));
             }
         });
-        editorViewModel.setState(EditorViewModel.State.None);
+        editorViewModel.setState(State.None);
         stateTextView.setOnClickListener(this);
 
         final TextView priorityTextView = findViewById(R.id.item_priority);
-        editorViewModel.getPriority().observe(this, new Observer<EditorViewModel.Priority>() {
+        editorViewModel.getPriority().observe(this, new Observer<Priority>() {
             @Override
-            public void onChanged(EditorViewModel.Priority priority) {
+            public void onChanged(Priority priority) {
                 priorityTextView.setText(String.format("Priority: %s", priority.toString()));
             }
         });
-        editorViewModel.setState(EditorViewModel.State.None);
+        editorViewModel.setState(State.None);
         priorityTextView.setOnClickListener(this);
 
         final TextView tags = findViewById(R.id.item_tags);
@@ -154,11 +171,14 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
         editorViewModel.getShowOnTime().observe(this, new Observer<ShowOnTime>() {
             @Override
             public void onChanged(ShowOnTime showOnTime) {
-                showOnAddition.setText(String.format("Interval: %s", showOnTime.toString()));
+                showOnAddition.setText(String.format("Repeat: %s", showOnTime.toString()));
             }
         });
         showOn.setOnClickListener(this);
         showOnAddition.setOnClickListener(this);
+        ShowOnTime showOnTime = new ShowOnTime();
+        showOnTime.type = ShowOnTime.Type.None;
+        editorViewModel.setShowOnTime(showOnTime);
 
         final TextView closed = findViewById(R.id.item_closed);
         final View closed_top = findViewById(R.id.item_closed_margin_top);
@@ -210,6 +230,30 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
                 finish();
                 break;
             case R.id.action_save:
+                if (editorViewModel.getTitle().getValue().trim().isEmpty()){
+                    Toast.makeText(this, "Please write title", Toast.LENGTH_SHORT).show();
+                }
+                else if (editorViewModel.getDeadeline().getValue() == null){
+                    Toast.makeText(this, "Please select deadline", Toast.LENGTH_SHORT).show();
+                }
+                else if (editorViewModel.getShow().getValue() == null){
+                    Toast.makeText(this, "Please select show-on time", Toast.LENGTH_SHORT).show();
+                }
+                else {
+                    StringBuilder builder = new StringBuilder();
+                    builder.append("*");
+                    while(itemPriority > 0){
+                        builder.append("*");
+                        itemPriority--;
+                    }
+                    builder.append(" ");
+                    builder.append(editorViewModel.toString());
+                    Intent intent = new Intent();
+                    intent.putExtra("Item", builder.toString());
+                    intent.putExtra(INTENT_PRIORITY, itemPriority);
+                    setResult(SUCCESS, intent);
+                    finish();
+                }
                 break;
         }
         return true;
@@ -218,9 +262,9 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
     @Override
     public void onClick(View v) {
         if (v.getId() == R.id.item_state){
-            final EditorViewModel.State[] states = EditorViewModel.State.values();
+            final State[] states = State.values();
             String[] items = new String[states.length];
-            EditorViewModel.State state = editorViewModel.getState().getValue();
+            State state = editorViewModel.getState().getValue();
             int index = 0;
             for (int i = 0; i < states.length; i++) {
                 items[i] = states[i].toString();
@@ -239,10 +283,10 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
                     }).create().show();
         }
         else if (v.getId() == R.id.item_priority){
-            final EditorViewModel.Priority[] priorities = EditorViewModel.Priority.values();
+            final Priority[] priorities = Priority.values();
             String[] array = new String[priorities.length];
             int index = 0;
-            EditorViewModel.Priority priority = editorViewModel.getPriority().getValue();
+            Priority priority = editorViewModel.getPriority().getValue();
             for (int i = 0; i < priorities.length; i++) {
                 array[i] = priorities[i].toString();
                 if (priority == priorities[i]){
@@ -327,13 +371,84 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
                     .create().show();
         }
         if (v.getId() == R.id.item_deadline){
-
+            pick(new Consumer<Time>() {
+                @Override
+                public void accept(Time time) {
+                    editorViewModel.setDeadline(time);
+                }
+            });
         }
         if (v.getId() == R.id.item_show_on){
-
+            pick(new Consumer<Time>() {
+                @Override
+                public void accept(Time time) {
+                    editorViewModel.setShow(time);
+                }
+            });
         }
         if (v.getId() == R.id.item_interval){
-
+            String[] items = {"None", "+1 day", "+1 week", "+1 month", "+1 year"};
+            new AlertDialog.Builder(this)
+                    .setTitle("Repeat:")
+                    .setSingleChoiceItems(items, 0, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            ShowOnTime time = new ShowOnTime();
+                            if (which == 0){
+                                time.type = ShowOnTime.Type.None;
+                            }
+                            else{
+                                time.type = ShowOnTime.Type.Repeat;
+                                time.num = 1;
+                                time.repeat = ShowOnTime.Repeat.valueOf(items[which].substring(3, 4));
+                            }
+                            editorViewModel.setShowOnTime(time);
+                            dialog.dismiss();
+                        }
+                    }).create().show();
         }
+    }
+
+    private void pick(Consumer<Time> consumer){
+        Calendar now = Calendar.getInstance();
+        DatePickerDialog dpd = DatePickerDialog.newInstance(
+                new DatePickerDialog.OnDateSetListener() {
+                    @Override
+                    public void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth) {
+                        Time t = new Time();
+                        t.year = year;
+                        t.month = monthOfYear;
+                        t.day = dayOfMonth;
+                        consumer.accept(t);
+                    }
+                },
+                now.get(Calendar.YEAR),
+                now.get(Calendar.MONTH),
+                now.get(Calendar.DAY_OF_MONTH)
+        );
+        dpd.setOkText("OK");
+        dpd.setCancelText("More");
+        dpd.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialog) {
+                final MonthAdapter.CalendarDay day = dpd.getSelectedDay();
+                TimePickerDialog tpd = TimePickerDialog.newInstance(new TimePickerDialog.OnTimeSetListener() {
+                    @Override
+                    public void onTimeSet(TimePickerDialog view, int hourOfDay, int minute, int second) {
+                        Time time = new Time();
+                        time.day = day.getDay();
+                        time.year = day.getYear();
+                        time.month = day.getMonth();
+                        time.hour = hourOfDay;
+                        time.minute = minute;
+                        consumer.accept(time);
+                    }
+                }, true);
+                tpd.setOkText("OK");
+                tpd.setCancelText("Cancel");
+                tpd.show(getSupportFragmentManager(), "TimePicker");
+            }
+        });
+        dpd.show(getSupportFragmentManager(), "DatePicker");
     }
 }

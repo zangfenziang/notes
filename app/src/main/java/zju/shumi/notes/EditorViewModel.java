@@ -10,14 +10,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
+
+import zju.shumi.notes.modal.Priority;
+import zju.shumi.notes.modal.ShowOnTime;
+import zju.shumi.notes.modal.State;
+import zju.shumi.notes.modal.Time;
 
 public class EditorViewModel extends ViewModel {
-    public enum State{
-        None, TODO, DONE
-    }
-    public enum Priority{
-        None, A, B, C, D
-    }
     private MutableLiveData<String> title;
     private MutableLiveData<String> filename;
     private MutableLiveData<State> state;
@@ -131,46 +131,41 @@ public class EditorViewModel extends ViewModel {
     public void setShow(Time show) {
         this.show.setValue(show);
     }
-}
-
-class Time{
-    private static String[] weeks = {"Sun", "Mon", "Tues", "Wed", "Thur", "Fri", "Sat"};
-    int year, month, day, hour, minute;
-
-    Time(){
-        this.hour = -1;
-        this.minute = -1;
-    }
 
     @NonNull
     @Override
     public String toString() {
-        Calendar c = Calendar.getInstance();
-        c.set(year, month, day);
-        String week = weeks[c.get(Calendar.DAY_OF_WEEK) - 1];
-        String s = String.format("%d-%02d-%02d %s", year, month, day, week);
-        if (this.hour >= 0){
-            s = String.format("%s %02d:%02d", s, hour, minute);
+        StringBuilder builder = new StringBuilder();
+        builder.append(state.getValue().toString());
+        builder.append(" ");
+        builder.append("[");
+        if (priority.getValue() != Priority.None){
+            builder.append("#");
         }
-        return s;
-    }
-}
-
-class ShowOnTime{
-    public enum TimeType{
-        None, Repeat, Period;
-    }
-    private Time additionTime;
-    private TimeType type;
-
-    public ShowOnTime(Time additionTime, TimeType type) {
-        this.additionTime = additionTime;
-        this.type = type;
-    }
-
-    @NonNull
-    @Override
-    public String toString() {
-        return "";
+        builder.append(priority.getValue().toString());
+        builder.append("] ");
+        builder.append(title.getValue());
+        if (!tags.getValue().isEmpty()){
+            builder.append(" [");
+            builder.append(String.join(" ", tags.getValue()));
+            builder.append("]");
+        }
+        builder.append("\n");
+        builder.append("DEADLINE: ");
+        builder.append(String.format("<%s>", deadline.getValue().toString()));
+        builder.append(" SCHEDULED: ");
+        builder.append(String.format("<%s> ", scheduled.getValue().toString()));
+        ShowOnTime time = showOnTime.getValue();
+        Time showTime = show.getValue();
+        if (time.type == ShowOnTime.Type.None){
+            builder.append(String.format("<%s>", showTime.toString()));
+        }
+        else{
+            builder.append(String.format("<%s %d%s>", showTime.toString(), time.num, time.repeat.toString()));
+        }
+        builder.append("\n");
+        builder.append(notes.getValue());
+        builder.append("\n");
+        return builder.toString();
     }
 }
