@@ -12,13 +12,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
 
+import zju.shumi.notes.modal.Priority;
+import zju.shumi.notes.modal.ShowOnTime;
+import zju.shumi.notes.modal.State;
+import zju.shumi.notes.modal.Time;
+
 public class EditorViewModel extends ViewModel {
-    public enum State{
-        None, TODO, DONE
-    }
-    public enum Priority{
-        None, A, B, C, D
-    }
     private MutableLiveData<String> title;
     private MutableLiveData<String> filename;
     private MutableLiveData<State> state;
@@ -168,51 +167,5 @@ public class EditorViewModel extends ViewModel {
         builder.append(notes.getValue());
         builder.append("\n");
         return builder.toString();
-    }
-}
-
-class Time{
-    private static String[] weeks = {"Sun", "Mon", "Tues", "Wed", "Thur", "Fri", "Sat"};
-    int year, month, day, hour, minute;
-
-    Time(){
-        this.hour = -1;
-        this.minute = -1;
-    }
-
-    @NonNull
-    @Override
-    public String toString() {
-        Calendar c = Calendar.getInstance();
-        c.set(year, month, day);
-        String week = weeks[c.get(Calendar.DAY_OF_WEEK) - 1];
-        String s = String.format("%d-%02d-%02d %s", year, month, day, week);
-        if (this.hour >= 0){
-            s = String.format("%s %02d:%02d", s, hour, minute);
-        }
-        return s;
-    }
-}
-
-class ShowOnTime{
-    public enum Type{
-        None, Repeat
-    }
-    Type type;
-    public enum Repeat{
-        d, w, m, y
-    }
-    int num;
-    Repeat repeat;
-
-    @NonNull
-    @Override
-    public String toString() {
-        if (type == Type.None){
-            return "None";
-        }
-        else{
-            return "+" + num + repeat.toString();
-        }
     }
 }

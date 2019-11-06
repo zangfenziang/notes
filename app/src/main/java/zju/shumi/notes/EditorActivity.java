@@ -38,13 +38,21 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import zju.shumi.notes.modal.Priority;
+import zju.shumi.notes.modal.ShowOnTime;
+import zju.shumi.notes.modal.State;
+import zju.shumi.notes.modal.Time;
+
+
 public class EditorActivity extends AppCompatActivity implements View.OnClickListener {
 
     public final static String INTENT_FILE_NAME = "Editor_File_Name";
+    public final static String INTENT_PRIORITY = "Editor_Priority";
     public final static int SUCCESS = 1;
 
     private EditorViewModel editorViewModel;
     private SharedPreferences sp;
+    private int itemPriority;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,26 +92,27 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
             }
         });
         String name = getIntent().getStringExtra(INTENT_FILE_NAME);
+        itemPriority = getIntent().getIntExtra(INTENT_PRIORITY, 0);
         editorViewModel.setFilename(name);
 
         final TextView stateTextView = findViewById(R.id.item_state);
-        editorViewModel.getState().observe(this, new Observer<EditorViewModel.State>() {
+        editorViewModel.getState().observe(this, new Observer<State>() {
             @Override
-            public void onChanged(EditorViewModel.State state) {
+            public void onChanged(State state) {
                 stateTextView.setText(String.format("State: %s", state.toString()));
             }
         });
-        editorViewModel.setState(EditorViewModel.State.None);
+        editorViewModel.setState(State.None);
         stateTextView.setOnClickListener(this);
 
         final TextView priorityTextView = findViewById(R.id.item_priority);
-        editorViewModel.getPriority().observe(this, new Observer<EditorViewModel.Priority>() {
+        editorViewModel.getPriority().observe(this, new Observer<Priority>() {
             @Override
-            public void onChanged(EditorViewModel.Priority priority) {
+            public void onChanged(Priority priority) {
                 priorityTextView.setText(String.format("Priority: %s", priority.toString()));
             }
         });
-        editorViewModel.setState(EditorViewModel.State.None);
+        editorViewModel.setState(State.None);
         priorityTextView.setOnClickListener(this);
 
         final TextView tags = findViewById(R.id.item_tags);
@@ -231,8 +240,17 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
                     Toast.makeText(this, "Please select show-on time", Toast.LENGTH_SHORT).show();
                 }
                 else {
+                    StringBuilder builder = new StringBuilder();
+                    builder.append("*");
+                    while(itemPriority > 0){
+                        builder.append("*");
+                        itemPriority--;
+                    }
+                    builder.append(" ");
+                    builder.append(editorViewModel.toString());
                     Intent intent = new Intent();
-                    intent.putExtra("Item", editorViewModel.toString());
+                    intent.putExtra("Item", builder.toString());
+                    intent.putExtra(INTENT_PRIORITY, itemPriority);
                     setResult(SUCCESS, intent);
                     finish();
                 }
@@ -244,9 +262,9 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
     @Override
     public void onClick(View v) {
         if (v.getId() == R.id.item_state){
-            final EditorViewModel.State[] states = EditorViewModel.State.values();
+            final State[] states = State.values();
             String[] items = new String[states.length];
-            EditorViewModel.State state = editorViewModel.getState().getValue();
+            State state = editorViewModel.getState().getValue();
             int index = 0;
             for (int i = 0; i < states.length; i++) {
                 items[i] = states[i].toString();
@@ -265,10 +283,10 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
                     }).create().show();
         }
         else if (v.getId() == R.id.item_priority){
-            final EditorViewModel.Priority[] priorities = EditorViewModel.Priority.values();
+            final Priority[] priorities = Priority.values();
             String[] array = new String[priorities.length];
             int index = 0;
-            EditorViewModel.Priority priority = editorViewModel.getPriority().getValue();
+            Priority priority = editorViewModel.getPriority().getValue();
             for (int i = 0; i < priorities.length; i++) {
                 array[i] = priorities[i].toString();
                 if (priority == priorities[i]){
