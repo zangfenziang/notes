@@ -14,6 +14,7 @@ import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.ImageButton;
@@ -23,6 +24,7 @@ import android.widget.TextView;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.function.Consumer;
 
 import zju.shumi.notes.R;
@@ -32,6 +34,7 @@ import zju.shumi.notes.modal.ItemsReader;
 import zju.shumi.notes.modal.Priority;
 import zju.shumi.notes.modal.ShowOnTime;
 import zju.shumi.notes.modal.State;
+import zju.shumi.notes.modal.Time;
 
 public class ItemActivity extends AppCompatActivity {
     public final static String FILENAME = "ITEM_ACTIVITY_FILENAME";
@@ -42,6 +45,7 @@ public class ItemActivity extends AppCompatActivity {
         Add, Insert
     }
     Operate  operate = Operate.Add;
+    Item beforeItem = null;
     File file;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +56,12 @@ public class ItemActivity extends AppCompatActivity {
         itemViewModel.getItems().observe(this, new Observer<ArrayList<Item>>() {
             @Override
             public void onChanged(ArrayList<Item> items) {
+                try {
+                    ItemWriter.write(file, items);
+                }
+                catch (Exception e){
+                    e.printStackTrace();
+                }
                 layout.removeAllViews();
                 items.forEach(new Consumer<Item>() {
                     @Override
@@ -80,25 +90,69 @@ public class ItemActivity extends AppCompatActivity {
                         headText.setText(Html.fromHtml(builder.toString()));
                         headText.setTextSize(24);
                         head.addView(headText, headParams);
-                        ImageView edit = new ImageView(ItemActivity.this);
-                        edit.setImageResource(R.drawable.ic_action_edit_black);
+//                        ImageView edit = new ImageView(ItemActivity.this);
+//                        edit.setImageResource(R.drawable.ic_action_edit_black);
+//                        headParams = new LinearLayout.LayoutParams(60, 60);
+//                        headParams.setMargins(20, 20, -5, 20);
+//                        head.addView(edit, headParams);
+                        ImageView add = new ImageView(ItemActivity.this);
                         headParams = new LinearLayout.LayoutParams(60, 60);
                         headParams.setMargins(20, 20, -5, 20);
-                        head.addView(edit, headParams);
-                        ImageView add = new ImageView(ItemActivity.this);
-                        headParams = new LinearLayout.LayoutParams(80, 80);
-                        headParams.setMargins(0, 10, -5, 10);
                         add.setImageResource(R.drawable.ic_action_add_black);
                         head.addView(add, headParams);
+                        add.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                operate = Operate.Insert;
+                                beforeItem = item;
+                                Intent intent = new Intent(ItemActivity.this, EditorActivity.class);
+                                intent.putExtra(EditorActivity.INTENT_FILE_NAME, filename);
+                                intent.putExtra(EditorActivity.INTENT_PRIORITY, item.getDeep() + 1);
+                                startActivityForResult(intent, START_EDITOR_ACTIVITY);
+                            }
+                        });
+                        headParams = new LinearLayout.LayoutParams(80, 80);
+                        headParams.setMargins(0, 10, -5, 10);
                         if (item.getState() == State.TODO){
                             ImageView done = new ImageView(ItemActivity.this);
                             done.setImageResource(R.drawable.ic_action_done_black);
                             head.addView(done, headParams);
+                            done.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    itemViewModel.setItem(item, new Consumer<Item>() {
+                                        @Override
+                                        public void accept(Item item) {
+                                            Calendar calendar = Calendar.getInstance();
+                                            Time time = new Time();
+                                            time.year = calendar.get(Calendar.YEAR);
+                                            time.month = calendar.get(Calendar.MONTH)+1;
+                                            time.day = calendar.get(Calendar.DAY_OF_MONTH);
+                                            time.hour = calendar.get(Calendar.HOUR_OF_DAY);
+                                            time.minute = calendar.get(Calendar.MINUTE);
+                                            item.setClosed(time);
+                                            item.setState(State.DONE);
+                                        }
+                                    });
+                                }
+                            });
                         }
                         else if (item.getState() == State.DONE){
                             ImageView undo = new ImageView(ItemActivity.this);
                             undo.setImageResource(R.drawable.ic_action_undo_black);
                             head.addView(undo, headParams);
+                            undo.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    itemViewModel.setItem(item, new Consumer<Item>() {
+                                        @Override
+                                        public void accept(Item item) {
+                                            item.setClosed(null);
+                                            item.setState(State.TODO);
+                                        }
+                                    });
+                                }
+                            });
                         }
                         linearLayout.addView(head);
 
@@ -202,10 +256,11 @@ public class ItemActivity extends AppCompatActivity {
                     Item item = Item.parse(result);
                     if (operate == Operate.Add){
                         itemViewModel.addItem(item);
-                        ItemWriter.write(file, itemViewModel.getItems().getValue());
                     }
                     else{
-
+                        if (beforeItem != null){
+                            itemViewModel.addItemAfterItem(item, beforeItem);
+                        }
                     }
                 }
                 catch (Exception err){

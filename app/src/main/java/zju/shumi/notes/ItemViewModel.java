@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import java.util.ArrayList;
+import java.util.function.Consumer;
 
 import zju.shumi.notes.modal.Item;
 
@@ -32,6 +33,11 @@ public class ItemViewModel extends ViewModel {
     public void addItemAfterItem(Item item, Item beforItem){
         ArrayList<Item> items = this.items.getValue();
         items.add(items.indexOf(beforItem) + 1, item);
+        this.items.setValue(items);
+    }
+    public void setItem(Item item, Consumer<Item> c){
+        ArrayList<Item> items = this.items.getValue();
+        c.accept(items.get(items.indexOf(item)));
         this.items.setValue(items);
     }
 }
