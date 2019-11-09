@@ -1,4 +1,4 @@
-package zju.shumi.notes.ui.home;
+package zju.shumi.notes;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -9,10 +9,11 @@ import java.util.Map;
 
 import zju.shumi.notes.modal.Item;
 
-public class HomeViewModel extends ViewModel {
-    private MutableLiveData<Map<String, ArrayList<Item>>> map;
-
-    public HomeViewModel(){
+public class SearchViewModel extends ViewModel {
+    MutableLiveData<Map<String, ArrayList<Item>>> map;
+    MutableLiveData<String> search;
+    public SearchViewModel(){
+        search = new MutableLiveData<>();
         map = new MutableLiveData<>();
     }
 
@@ -22,5 +23,13 @@ public class HomeViewModel extends ViewModel {
 
     public void setMap(Map<String, ArrayList<Item>> map) {
         this.map.setValue(map);
+    }
+
+    public LiveData<String> getSearch() {
+        return search;
+    }
+
+    public void setSearch(String search) {
+        this.search.setValue(search);
     }
 }
