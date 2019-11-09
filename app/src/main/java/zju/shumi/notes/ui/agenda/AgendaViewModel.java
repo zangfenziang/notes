@@ -11,7 +11,7 @@ import zju.shumi.notes.modal.Item;
 import zju.shumi.notes.modal.Time;
 
 public class AgendaViewModel extends ViewModel {
-    MutableLiveData<Map<Time, Map<String, Item>>> map;
+    MutableLiveData<Map<Time, Map<Item, String>>> map;
     MutableLiveData<Day> day;
     public AgendaViewModel(){
         map = new MutableLiveData<>();
@@ -27,11 +27,11 @@ public class AgendaViewModel extends ViewModel {
         this.day.setValue(day);
     }
 
-    public LiveData<Map<Time, Map<String, Item>>> getMap() {
+    public LiveData<Map<Time, Map<Item, String>>> getMap() {
         return map;
     }
 
-    public void setMap(Map<Time, Map<String, Item>> map) {
+    public void setMap(Map<Time, Map<Item, String>> map) {
         this.map.setValue(map);
     }
 }

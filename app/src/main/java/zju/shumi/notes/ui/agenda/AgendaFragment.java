@@ -13,9 +13,11 @@ import androidx.fragment.app.Fragment;
 
 import android.os.Environment;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -40,6 +42,7 @@ import zju.shumi.notes.MainActivity;
 import zju.shumi.notes.R;
 import zju.shumi.notes.modal.Item;
 import zju.shumi.notes.modal.ItemsReader;
+import zju.shumi.notes.modal.State;
 import zju.shumi.notes.modal.Time;
 
 public class AgendaFragment extends Fragment {
@@ -95,9 +98,9 @@ public class AgendaFragment extends Fragment {
                 dpd.show(getFragmentManager(), "DatePicker");
             }
         });
-        mViewModel.getMap().observe(this, new Observer<Map<Time, Map<String, Item>>>() {
+        mViewModel.getMap().observe(this, new Observer<Map<Time, Map<Item, String>>>() {
             @Override
-            public void onChanged(Map<Time, Map<String, Item>> timeMapMap) {
+            public void onChanged(Map<Time, Map<Item, String>> timeMapMap) {
                 flush();
             }
         });
@@ -106,7 +109,7 @@ public class AgendaFragment extends Fragment {
             @Override
             public void accept(SharedPreferences sharedPreferences) {
                 Set<String> filenames = sharedPreferences.getStringSet(MainActivity.OrgFileNames, new HashSet<>());
-                final Map<Time, Map<String, Item>> map = new HashMap<>();
+                final Map<Time, Map<Item, String>> map = new HashMap<>();
                 filenames.forEach(new Consumer<String>() {
                     @Override
                     public void accept(String s) {
@@ -116,8 +119,8 @@ public class AgendaFragment extends Fragment {
                             items.forEach(new Consumer<Item>() {
                                 @Override
                                 public void accept(Item item) {
-                                    Map<String, Item> m = map.getOrDefault(item.getDeadline(), new HashMap<>());
-                                    m.put(s, item);
+                                    Map<Item, String> m = map.getOrDefault(item.getDeadline(), new HashMap<>());
+                                    m.put(item, s);
                                     map.put(item.getDeadline(), m);
                                 }
                             });
@@ -142,27 +145,29 @@ public class AgendaFragment extends Fragment {
     }
 
     private void flush(){
-        Map<Time, Map<String, Item>> map = mViewModel.getMap().getValue();
-        Map<Time, Map<String, Item>> sortMap = new LinkedHashMap<>();
-        map.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEachOrdered(new Consumer<Map.Entry<Time, Map<String, Item>>>() {
+        Map<Time, Map<Item, String>> map = mViewModel.getMap().getValue();
+        Map<Time, Map<Item, String>> sortMap = new LinkedHashMap<>();
+        map.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEachOrdered(new Consumer<Map.Entry<Time, Map<Item, String>>>() {
             @Override
-            public void accept(Map.Entry<Time, Map<String, Item>> timeMapEntry) {
+            public void accept(Map.Entry<Time, Map<Item, String>> timeMapEntry) {
                 sortMap.put(timeMapEntry.getKey(), timeMapEntry.getValue());
             }
         });
         final Day now = mViewModel.getDay().getValue();
         LocalDate cNow = LocalDate.of(now.year, now.month, now.day);
         layout.removeAllViews();
-        sortMap.forEach(new BiConsumer<Time, Map<String, Item>>() {
+        LinearLayout.MarginLayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMargins(30, 10, 30, 10);
+        sortMap.forEach(new BiConsumer<Time, Map<Item, String>>() {
             @Override
-            public void accept(Time time, Map<String, Item> stringItemMap) {
+            public void accept(Time time, Map<Item, String> stringItemMap) {
                 LocalDate cTime = LocalDate.of(time.year, time.month, time.day);
                 Period p = Period.between(cNow, cTime);
                 if (p.getYears() != 0 || p.getMonths() != 0 || p.getDays() > 6 || p.getDays() < -1){
                     return;
                 }
-                Map<String, Item> sort = new LinkedHashMap<>();
-                stringItemMap.entrySet().stream().sorted(Map.Entry.comparingByValue(new Comparator<Item>() {
+                Map<Item, String> sort = new LinkedHashMap<>();
+                stringItemMap.entrySet().stream().sorted(Map.Entry.comparingByKey(new Comparator<Item>() {
                     @Override
                     public int compare(Item o1, Item o2) {
                         Time t1 = o1.getDeadline();
@@ -181,16 +186,58 @@ public class AgendaFragment extends Fragment {
                         }
                         return t1.hour < t2.hour ? -1 : 1;
                     }
-                })).forEachOrdered(new Consumer<Map.Entry<String, Item>>() {
+                })).forEachOrdered(new Consumer<Map.Entry<Item, String>>() {
                     @Override
-                    public void accept(Map.Entry<String, Item> stringItemEntry) {
+                    public void accept(Map.Entry<Item, String> stringItemEntry) {
                         sort.put(stringItemEntry.getKey(), stringItemEntry.getValue());
                     }
                 });
-                sort.forEach(new BiConsumer<String, Item>() {
+                TextView dateTextView = new TextView(getContext());
+                dateTextView.setText(String.format("%d-%d-%d", time.year, time.month, time.day));
+                layout.addView(dateTextView, params);
+                sort.forEach(new BiConsumer<Item, String>() {
                     @Override
-                    public void accept(String s, Item item) {
-
+                    public void accept(Item item, String s) {
+                        LinearLayout linearLayout = new LinearLayout(getContext());
+                        linearLayout.setBackgroundResource(R.drawable.ripple);
+                        linearLayout.setOrientation(LinearLayout.HORIZONTAL);
+                        ImageView imageView = new ImageView(getContext());
+                        if (item.getState() == State.DONE){
+                            imageView.setImageResource(R.drawable.ic_action_agenda_done);
+                        }
+                        else if (item.getState() == State.None){
+                            imageView.setImageResource(R.drawable.ic_action_agenda_none);
+                        }
+                        else if (p.getDays() < 0){
+                            imageView.setImageResource(R.drawable.ic_action_agenda_timeout);
+                        }
+                        else{
+                            imageView.setImageResource(R.drawable.ic_action_agenda_todo);
+                        }
+                        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                        layoutParams.gravity = Gravity.CENTER_VERTICAL;
+                        layoutParams.rightMargin = 30;
+                        linearLayout.addView(imageView, layoutParams);
+                        LinearLayout mLinearLayout = new LinearLayout(getContext());
+                        layoutParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT);
+                        layoutParams.weight = 1;
+                        mLinearLayout.setOrientation(LinearLayout.VERTICAL);
+                        TextView filename = new TextView(getContext());
+                        filename.setText(s);
+                        mLinearLayout.addView(filename);
+                        TextView title = new TextView(getContext());
+                        title.getPaint().setFakeBoldText(true);
+                        title.setTextSize(16);
+                        title.setText(item.getTitle());
+                        mLinearLayout.addView(title);
+                        linearLayout.addView(mLinearLayout, layoutParams);
+                        TextView textView = new TextView(getContext());
+                        textView.getPaint().setFakeBoldText(true);
+                        textView.setText(item.getState().toString());
+                        layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                        layoutParams.gravity = Gravity.CENTER_VERTICAL;
+                        linearLayout.addView(textView, layoutParams);
+                        layout.addView(linearLayout, params);
                     }
                 });
             }
