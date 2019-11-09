@@ -417,7 +417,7 @@ public class EditorActivity extends AppCompatActivity implements View.OnClickLis
                     public void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth) {
                         Time t = new Time();
                         t.year = year;
-                        t.month = monthOfYear;
+                        t.month = monthOfYear + 1;
                         t.day = dayOfMonth;
                         consumer.accept(t);
                     }
