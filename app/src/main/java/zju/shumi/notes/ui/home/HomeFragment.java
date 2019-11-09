@@ -23,6 +23,7 @@ import java.io.File;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -33,6 +34,7 @@ import java.util.function.Consumer;
 import zju.shumi.notes.MainActivity;
 import zju.shumi.notes.R;
 import zju.shumi.notes.modal.Item;
+import zju.shumi.notes.modal.ItemWriter;
 import zju.shumi.notes.modal.ItemsReader;
 import zju.shumi.notes.modal.State;
 import zju.shumi.notes.modal.Time;
@@ -40,6 +42,8 @@ import zju.shumi.notes.modal.Time;
 public class HomeFragment extends Fragment {
 
     private HomeViewModel homeViewModel;
+    private Consumer<SharedPreferences> consumer;
+    private SharedPreferences sp;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -108,6 +112,37 @@ public class HomeFragment extends Fragment {
                                 layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                                 layoutParams.gravity = Gravity.CENTER_VERTICAL;
                                 linearLayout.addView(textView, layoutParams);
+                                ImageView button = new ImageView(getContext());
+                                button.setImageResource(R.drawable.ic_action_done_black);
+                                linearLayout.addView(button, layoutParams);
+                                button.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        File file = new File(Environment.getExternalStorageDirectory() + MainActivity.OrgFileDir + s + ".org");
+                                        try{
+                                            ArrayList<Item> items = ItemsReader.read(file);
+                                            for (int i = 0; i < items.size(); i++) {
+                                                Item data = items.get(i);
+                                                if (data.toString().equals(item.toString())){
+                                                    Time closed = new Time();
+                                                    Calendar calendar = Calendar.getInstance();
+                                                    closed.year = calendar.get(Calendar.YEAR);
+                                                    closed.month = calendar.get(Calendar.MONTH)+1;
+                                                    closed.day = calendar.get(Calendar.DAY_OF_MONTH);
+                                                    closed.hour = calendar.get(Calendar.HOUR_OF_DAY);
+                                                    closed.minute = calendar.get(Calendar.MINUTE);
+                                                    data.setClosed(closed);
+                                                    data.setState(State.DONE);
+                                                }
+                                            }
+                                            ItemWriter.write(file, items);
+                                            flush();
+                                        }
+                                        catch (Exception e){
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                });
                                 layout.addView(linearLayout, params);
                             }
                         });
@@ -115,8 +150,8 @@ public class HomeFragment extends Fragment {
                 });
             }
         });
-        SharedPreferences sp = getActivity().getSharedPreferences("cache", Context.MODE_PRIVATE);
-        Consumer<SharedPreferences> consumer = new Consumer<SharedPreferences>() {
+        sp = getActivity().getSharedPreferences("cache", Context.MODE_PRIVATE);
+        consumer = new Consumer<SharedPreferences>() {
             @Override
             public void accept(SharedPreferences sharedPreferences) {
                 Set<String> filenames = sharedPreferences.getStringSet(MainActivity.OrgFileNames, new HashSet<>());
@@ -154,5 +189,9 @@ public class HomeFragment extends Fragment {
             }
         });
         return root;
+    }
+
+    private void flush(){
+        consumer.accept(sp);
     }
 }

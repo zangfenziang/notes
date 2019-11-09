@@ -181,6 +181,7 @@ public class ItemActivity extends AppCompatActivity {
                         if (item.getClosed() != null){
                             TextView closed = new TextView(ItemActivity.this);
                             closed.setText("CLOSED: <" + item.getClosed().toString() + ">");
+                            closed.setTextSize(16);
                             linearLayout.addView(closed);
                         }
                         TextView showOn = new TextView(ItemActivity.this);

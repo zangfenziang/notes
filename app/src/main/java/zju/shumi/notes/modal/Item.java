@@ -248,6 +248,10 @@ public class Item {
         builder.append(String.format("<%s>", deadline.toString()));
         builder.append(" SCHEDULED: ");
         builder.append(String.format("<%s> ", scheduled.toString()));
+        if (closed != null){
+            builder.append("CLOSED: ");
+            builder.append(String.format("<%s> ", closed.toString()));
+        }
         ShowOnTime time = showOnTime;
         Time showTime = getShowOn();
         if (time.type == ShowOnTime.Type.None){
